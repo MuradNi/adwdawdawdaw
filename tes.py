@@ -1429,28 +1429,6 @@ def start_main_application(root):
     # Tampilkan jendela utama
     root.deiconify()
 
-def check_and_activate_key(root):
-    is_valid, message = check_key()
-    if is_valid:
-        messagebox.showinfo("Info", "Perangkat ini sudah memiliki key aktif.\nAplikasi berjalan...")
-        return True
-    else:
-        while True:
-            key = simpledialog.askstring("Aktivasi", "Masukkan key untuk aktivasi:")
-            if key:
-                is_activated, activation_message, activated_key = activate_key(key)
-                if is_activated:
-                    messagebox.showinfo("Info", activation_message + "\nAplikasi berjalan...")
-                    return True
-                else:
-                    retry = messagebox.askretrycancel("Error", activation_message + "\nCoba lagi?")
-                    if not retry:
-                        send_uuid_status_webhook(UNREGISTERED_WEBHOOK_URL, "Invalid key entered", is_registered=False)
-                        return False
-            else:
-                send_uuid_status_webhook(UNREGISTERED_WEBHOOK_URL, "No key entered", is_registered=False)
-                return False
-
 def main():
     root = create_themed_tk()
     root.withdraw()  # Hide the main window initially
