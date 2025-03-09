@@ -401,7 +401,7 @@ class Loader:
             self.progress.config(text="Mengunduh kode terbaru...")
             
             # URL ke file Python raw di GitHub (ganti dengan URL Anda)
-            github_url = "https://raw.githubusercontent.com/username/repo/main/autospam.py"
+            github_url = "https://raw.githubusercontent.com/MuradNi/adwdawdawdaw/refs/heads/main/tes.py"
             
             # Unduh kode
             response = requests.get(github_url)
